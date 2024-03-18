@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda-console
+  labels:
+    app: redpanda-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda-console
+  template:
+    metadata:
+      labels:
+        app: redpanda-console
+    spec:
+      containers:
+      - name: nginx
+        image: docker.redpanda.com/redpandadata/console:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: KAFKA_BROKERS
+          value: my-cluster-kafka-brokers.kafka-tests.svc.cluster.local:9092
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kowl-service
+  namespace: kafka-tests
+spec:
+  ports:
+    - name: kowl-port
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+  selector:
+    app: redpanda-console
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: kowl
+  namespace: kafka-tests
+spec:
+  to:
+    kind: Service
+    name: kowl-service
+    weight: 100
+  port:
+    targetPort: kowl-port
+  tls:
+    termination: edge
+  wildcardPolicy: None
